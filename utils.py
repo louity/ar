@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 import skimage
+import skimage.morphology
 
 def get_axis_bounds(axis):
     x_min, x_max = axis.get_xlim()
@@ -121,3 +122,15 @@ def find_middle_lines_with_successive_gaussian_blurs(component, sigmas):
     return strokes
 
 
+def get_strokes(img, min_length=10):
+    strokes = []
+    labeled_components = skimage.measure.label(img, background=0)
+
+    for label in range(1, labeled_components.max()):
+        connected_component = (labeled_components == label).astype('float')
+        skeleton = skimage.morphology.skeletonize(connected_component)
+        strokes += convert_mask_to_strokes(skeleton, connected_component, max_dist=3)
+
+    strokes = [stroke for stroke in strokes if len(stroke) > min_length]
+
+    return strokes
