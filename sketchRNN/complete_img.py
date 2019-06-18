@@ -365,7 +365,7 @@ def tina_et_charlie(model_name,
 
 def tina_et_charlie_2(hp_filepath, encoder_ckpt, decoder_ckpt,
                       use_cuda, nbr_point_next, painting_completing,
-                      painting_conditioning, sig=0.1):
+                      painting_conditioning, sig=0.1, plot=False):
 
     # transform seq of stroke into (nbr,3)
     painting_completing = from_larray_to_3array(painting_completing)
@@ -427,8 +427,9 @@ def tina_et_charlie_2(hp_filepath, encoder_ckpt, decoder_ckpt,
                                                img_tail[:, 1],
                                                img_tail[:, 2])
 
-    make_image(img_coo, 1, dest_folder=None, name='_output_', plot=True)#plot=args_draw.plot)
-    make_image(img_tail_coo, 2, dest_folder=None, name='_output_', plot=True)
+
+    make_image(img_coo, 1, dest_folder=None, name='_output_', plot=plot)#plot=args_draw.plot)
+    make_image(img_tail_coo, 2, dest_folder=None, name='_output_', plot=plot)
 
     
     # set the end of the stroke
