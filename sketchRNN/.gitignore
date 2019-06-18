@@ -1,0 +1,8 @@
+save/
+images/
+*.npz
+1__output__.jpg
+2__output__.jpg
+sketchrnn/__pycache__/
+sketchrnn/dataset/__pycache__
+__pycache__/
