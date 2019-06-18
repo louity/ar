@@ -122,7 +122,7 @@ def find_middle_lines_with_successive_gaussian_blurs(component, sigmas):
     return strokes
 
 
-def get_strokes(img, min_length=10):
+def get_strokes(img, min_length=5, subsample=5):
     strokes = []
     labeled_components = skimage.measure.label(img, background=0)
 
@@ -131,6 +131,7 @@ def get_strokes(img, min_length=10):
         skeleton = skimage.morphology.skeletonize(connected_component)
         strokes += convert_mask_to_strokes(skeleton, connected_component, max_dist=3)
 
+    strokes = [stroke[::subsample] for stroke in strokes]
     strokes = [stroke for stroke in strokes if len(stroke) > min_length]
 
     return strokes
