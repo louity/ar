@@ -360,16 +360,24 @@ def tina_et_charlie(model_name,
     # Transform (nbr,3) to list of array (nbr,2)
     # TODO: verifier la question de l'origine
     img_completed = from_3array_to_larray(img_tail_coo)
-    return img_completed 
+    return img_completed
 
 
 def tina_et_charlie_2(hp_filepath, encoder_ckpt, decoder_ckpt,
                       use_cuda, nbr_point_next, painting_completing,
-                      painting_conditioning, sig=0.1, plot=False):
+                      painting_conditioning, sig=0.1, plot=False,
+                      set_first_point_to_zero=False, rescale_tail=True):
 
     # transform seq of stroke into (nbr,3)
     painting_completing = from_larray_to_3array(painting_completing)
     painting_conditioning = from_larray_to_3array(painting_conditioning)
+
+    if set_first_point_to_zero:
+        painting_completing_first_point = painting_completing[0:1].copy()
+        painting_conditioning_first_point = painting_conditioning[0:1].copy()
+
+        painting_completing -= painting_completing_first_point
+        painting_conditioning -= painting_conditioning_first_point
 
     # load hp
     # hp_path = 'draw_models/hp_folder/' + model_name[:-4] + '.pickle'
@@ -386,6 +394,7 @@ def tina_et_charlie_2(hp_filepath, encoder_ckpt, decoder_ckpt,
     # It is in format (x,y,p) put it into that (dx,dy,p) format
     datum = painting_completing
     # offset the coordinate
+
     datum[1:, 0:2] = datum[1:, 0:2] - datum[:-1, 0:2]
     # compute the std of initial image
     mean_ini, std_ini = compute_variance(datum)
@@ -411,8 +420,10 @@ def tina_et_charlie_2(hp_filepath, encoder_ckpt, decoder_ckpt,
 
     # process the tail so that it has the same variance as the images
     # it tries to complete.
-    mean_tail, std_tail = compute_variance(img_tail)
-    img_tail = scale_stroke(img_tail, std_tail)
+    if rescale_tail:
+        mean_tail, std_tail = compute_variance(img_tail)
+        img_tail = scale_stroke(img_tail, std_tail)
+
     img_total = np.concatenate((datum_scaled, img_tail), 0)
 
     # rescale the images to the original scale
@@ -431,9 +442,13 @@ def tina_et_charlie_2(hp_filepath, encoder_ckpt, decoder_ckpt,
     make_image(img_coo, 1, dest_folder=None, name='_output_', plot=plot)#plot=args_draw.plot)
     make_image(img_tail_coo, 2, dest_folder=None, name='_output_', plot=plot)
 
-    
     # set the end of the stroke
     img_coo[-1, 2] = 1
+
+    if set_first_point_to_zero:
+        # add the first point
+        img_coo += painting_completing_first_point
+
     return from_3array_to_larray(img_coo)
 
 if __name__ == '__main__':
