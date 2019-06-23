@@ -3,10 +3,6 @@ import argparse
 import configparser
 import matplotlib.pyplot as plt
 import numpy as np
-import PIL
-import scipy
-import skimage
-import torch
 import utils
 import utils_camera
 import utils_RNN
@@ -67,11 +63,15 @@ while continue_loop:
     color_images = utils.separate_color_images(img, colors, thresholds)
 
     print('Selecting a stroke...')
+    subsample = int(strokes_config['subsample'])
+    min_length = int(strokes_config['min_length'])
+
     color_id = np.random.randint(len(colors))
     color_img = color_images[color_id]
-    color_strokes = utils.get_strokes(color_img)
+    color_strokes = utils.get_strokes(color_img, subsample=subsample, min_length=min_length)
     stroke_id = np.random.randint(len(color_strokes))
     stroke = color_strokes[stroke_id]
+
 
     fig, (ax1, ax2) = plt.subplots(1, 2)
     ax1.imshow(color_img)
@@ -88,6 +88,7 @@ while continue_loop:
 
 
     print('Completing the stroke...')
+    stroke = np.array(stroke)
     sketchRNN_config = config['sketchRNN']
     new_strokes = utils_RNN.complete_stroke(stroke, sketchRNN_config)
 
