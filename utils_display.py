@@ -5,7 +5,7 @@ import scipy
 import subprocess
 
 
-def save_stroke_image(stroke, xlim, ylim, aspect, screen_height, screen_width, image_y, image_x, image_height, image_width, stroke_width=1., filename='to_project.jpg'):
+def save_stroke_image(strokes, xlim, ylim, aspect, screen_height, screen_width, image_y, image_x, image_height, image_width, stroke_width=1., filename='to_project.jpg'):
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
     ax.set_xlim(xlim)
@@ -13,7 +13,8 @@ def save_stroke_image(stroke, xlim, ylim, aspect, screen_height, screen_width, i
     ax.set_aspect(aspect)
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
-    ax.plot(stroke[:, 1], stroke[:, 0], linewidth=stroke_width)
+    for stroke in strokes:
+        ax.plot(stroke[:, 1], stroke[:, 0], linewidth=stroke_width)
 
     fig.savefig('tmp.jpg', bbox_inches='tight', pad_inches=0, dpi=500)
     img = np.array(PIL.Image.open('./tmp.jpg'))
