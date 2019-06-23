@@ -135,3 +135,26 @@ def get_strokes(img, min_length=5, subsample=5):
     strokes = [stroke for stroke in strokes if len(stroke) > min_length]
 
     return strokes
+
+def interpolate_stroke(stroke, spline_order, n_points):
+    """
+    Parameters
+        stroke: np array, shape (n, 2)
+
+        spline_order: int
+            integer order of the spline
+
+        n_points: int
+            number of points for the interpolation
+
+    Returns
+        interpolated_stroke: np array shape (n_points, 2)
+    """
+
+    tck, u = scipy.interpolate.splprep(stroke.transpose(), s=spline_order)
+    unew = np.linspace(0, 1, n_points)
+    out = scipy.interpolate.splev(unew, tck)
+
+    interpolated_stroke = np.array(out).transpose()
+
+    return interpolated_stroke
