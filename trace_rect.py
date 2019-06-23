@@ -66,7 +66,7 @@ class RectTracker:
     def __update(self, event):
         if not self.start:
             self.start = [event.x, event.y]
-            print('start: ({}, {})'.format(event.x, event.y))
+            print('image_x, image_y = ({}, {})'.format(event.x, event.y))
             return
         
         if self.item is not None:
@@ -75,7 +75,7 @@ class RectTracker:
         self._command(self.start, (event.x, event.y))
         
     def __stop(self, event):
-        print('stop: ({}, {})'.format(event.x, event.y))
+        print('image_x_end, image_y_end = ({}, {})'.format(event.x, event.y))
         self.start = None
         self.canvas.delete(self.item)
         self.item = None
