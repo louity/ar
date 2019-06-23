@@ -439,8 +439,9 @@ def tina_et_charlie_2(hp_filepath, encoder_ckpt, decoder_ckpt,
                                                img_tail[:, 2])
 
 
-    make_image(img_coo, 1, dest_folder=None, name='_output_', plot=plot)#plot=args_draw.plot)
-    make_image(img_tail_coo, 2, dest_folder=None, name='_output_', plot=plot)
+    if plot:
+        make_image(img_coo, 1, dest_folder=None, name='_output_', plot=True)
+        make_image(img_tail_coo, 2, dest_folder=None, name='_output_', plot=True)
 
     # set the end of the stroke
     img_coo[-1, 2] = 1
