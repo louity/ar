@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import PIL
-import scipy
+import skimage
 import subprocess
 
 
@@ -19,7 +19,7 @@ def save_stroke_image(strokes, xlim, ylim, aspect, screen_height, screen_width, 
     fig.savefig('tmp.jpg', bbox_inches='tight', pad_inches=0, dpi=500)
     img = np.array(PIL.Image.open('./tmp.jpg'))
     full_img = 255*np.ones((screen_height, screen_width, 3), dtype=np.uint8)
-    full_img[image_y:image_y+image_height, image_x:image_x+image_width,:] = scipy.misc.imresize(img, (image_height, image_width))
+    full_img[image_y:image_y+image_height, image_x:image_x+image_width,:] = skimage.transform.resize(img, (image_height, image_width))
     im = PIL.Image.fromarray(full_img)
     im.save(filename)
 
