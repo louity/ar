@@ -158,3 +158,33 @@ def interpolate_stroke(stroke, spline_order, n_points):
     interpolated_stroke = np.array(out).transpose()
 
     return interpolated_stroke
+
+
+def translate_and_rotate_stroke(stroke, img_shape):
+    theta = np.random.uniform(0, 2*np.pi)
+    print(f'theta: {theta:.2f}')
+    cos_theta, sin_theta = np.cos(theta), np.sin(theta)
+    R = np.array(((cos_theta,-sin_theta), (sin_theta, cos_theta)))
+
+    rotated_stroke = stroke.copy().astype('float32')
+    mean = rotated_stroke.mean(axis=0, keepdims=True)
+    rotated_stroke -= mean
+    rotated_stroke = np.dot(rotated_stroke, R.transpose())
+    rotated_stroke += mean
+
+    tx_min, tx_max = -rotated_stroke[:, 1].min(), img_shape[1] - rotated_stroke[:, 1].max()
+    ty_min, ty_max = -rotated_stroke[:, 0].min(), img_shape[0] - rotated_stroke[:, 0].max()
+    tx, ty = np.random.uniform(tx_min, tx_max), np.random.uniform(ty_min, ty_max)
+    translated_stroke = rotated_stroke.copy()
+    translated_stroke[:,1] += tx
+    translated_stroke[:,0] += ty
+
+    return translated_stroke.astype('int')
+
+
+def periodize_stroke(stroke, xlim, ylim):
+    # FIXME: not working yet
+    periodized_stroke = np.zeros_like(stroke)
+    periodized_stroke[:,0] = ylim[0] + (stroke[:, 0] - ylim[0]) % (ylim[1] - ylim[0])
+    periodized_stroke[:,1] = xlim[0] + (stroke[:, 1] - xlim[0]) % (xlim[1] - xlim[0])
+    return periodized_stroke
