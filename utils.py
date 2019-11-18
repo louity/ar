@@ -122,14 +122,15 @@ def find_middle_lines_with_successive_gaussian_blurs(component, sigmas):
     return strokes
 
 
-def get_strokes(img, min_length=5, subsample=5):
-    strokes = []
-    labeled_components = skimage.measure.label(img, background=0)
+def denoise_tv(img, tv_weight=1, max_ratio=0.3):
+    img_tv = skimage.restoration.denoise_tv_chambolle(img, weight=tv_weight)
+    img_tv = img_tv > (max_ratio * img_tv.max())
+    return img_tv
 
-    for label in range(1, labeled_components.max()):
-        connected_component = (labeled_components == label).astype('float')
-        skeleton = skimage.morphology.skeletonize(connected_component)
-        strokes += convert_mask_to_strokes(skeleton, connected_component, max_dist=3)
+
+def get_strokes(img, min_length=5, subsample=5, max_dist_in_stroke=3):
+    skeleton = skimage.morphology.skeletonize(img)
+    strokes = convert_mask_to_strokes(skeleton, img, max_dist=max_dist_in_stroke)
 
     strokes = [stroke[::subsample] for stroke in strokes]
     strokes = [stroke for stroke in strokes if len(stroke) > min_length]
@@ -162,7 +163,6 @@ def interpolate_stroke(stroke, spline_order, n_points):
 
 def translate_and_rotate_stroke(stroke, img_shape):
     theta = np.random.uniform(0, 2*np.pi)
-    print(f'theta: {theta:.2f}')
     cos_theta, sin_theta = np.cos(theta), np.sin(theta)
     R = np.array(((cos_theta,-sin_theta), (sin_theta, cos_theta)))
 

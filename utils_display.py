@@ -21,6 +21,11 @@ def save_stroke_image(strokes, xlim, ylim, aspect, screen_height, screen_width, 
     resized_img = resize(img, (image_height, image_width), preserve_range=True)
     if mask is not None:
         resized_img *= resize(mask, (image_height, image_width), preserve_range=True)
+
+    white_img = np.zeros((screen_height, screen_width, 3), dtype=np.uint8)
+    white_img[image_y:image_y+image_height, image_x:image_x+image_width,:] = 255
+    PIL.Image.fromarray(white_img).save('white.png')
+
     full_img = 255*np.ones((screen_height, screen_width, 3), dtype=np.uint8)
     full_img[image_y:image_y+image_height, image_x:image_x+image_width,:] = resized_img
     im = PIL.Image.fromarray(full_img)
@@ -28,4 +33,7 @@ def save_stroke_image(strokes, xlim, ylim, aspect, screen_height, screen_width, 
 
 
 def display_stroke(filename='to_project.jpg'):
+    subprocess.run(['feh', '--fullscreen', filename])
+
+def display_white(filename='white.png'):
     subprocess.run(['feh', '--fullscreen', filename])
