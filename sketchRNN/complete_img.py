@@ -291,7 +291,7 @@ def create_example_painting():
     # import pdb; pdb.set_trace()
 
 
-def tina_et_charlie(model_name,
+def tina_et_charly(model_name,
              use_cuda,
              nbr_point_next,
              painting_completing,
@@ -363,7 +363,7 @@ def tina_et_charlie(model_name,
     return img_completed
 
 
-def tina_et_charlie_2(hp_filepath, encoder_ckpt, decoder_ckpt,
+def tina_et_charly_2(hp_filepath, encoder_ckpt, decoder_ckpt,
                       use_cuda, nbr_point_next, painting_completing,
                       painting_conditioning, sig=0.1, plot=False,
                       set_first_point_to_zero=False, rescale_tail=True):
@@ -458,7 +458,7 @@ if __name__ == '__main__':
     paint_circle[-1, 2] = 1
     paint = from_3array_to_larray(paint_circle)
 
-    # tina_et_charlie(args_draw.model,
+    # tina_et_charly(args_draw.model,
     #                 use_cuda,
     #                 args_draw.nbr_point_next,
     #                 paint,
@@ -468,7 +468,7 @@ if __name__ == '__main__':
     hp_filepath = 'draw_models/hp_folder/broccoli_car_cat_20000.pickle'
     encoder_ckpt = 'draw_models/encoder_broccoli_car_cat_20000.pth'
     decoder_ckpt = 'draw_models/decoder_broccoli_car_cat_20000.pth'
-    img_completed = tina_et_charlie_2(hp_filepath, encoder_ckpt, decoder_ckpt, use_cuda,
+    img_completed = tina_et_charly_2(hp_filepath, encoder_ckpt, decoder_ckpt, use_cuda,
                       args_draw.nbr_point_next, paint, paint,
                       args_draw.sigma)
 
