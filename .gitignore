@@ -1,6 +1,7 @@
 __pycache__
 **/__pycache__
 sketchRNN/sketchRNN.egg-info
+sketchRNN/*.jpg
 sketchRNN/draw_models/*.pth
 sketchRNN/draw_models/hp_folder/*.pickle
 !sketchRNN/draw_models/decoder_broccoli_car_cat_20000.pth
