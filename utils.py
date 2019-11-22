@@ -128,14 +128,20 @@ def denoise_tv(img, tv_weight=1, max_ratio=0.3):
     return img_tv
 
 
-def get_strokes(img, min_length=5, subsample=5, max_dist_in_stroke=3):
+def get_sketch(img, min_length=5, subsample=5, max_dist_in_stroke=3):
+    """Generates the sketch of a binary image."""
     skeleton = skimage.morphology.skeletonize(img)
-    strokes = convert_mask_to_strokes(skeleton, img, max_dist=max_dist_in_stroke)
+    labeled_skeleton = skimage.morphology.label(skeleton, background=0, connectivity=2)
+    sketch = []
+    for i_label in range(1, labeled_skeleton.max()+1):
+        strokes_mask = labeled_skeleton == i_label
+        strokes = convert_mask_to_strokes(strokes_mask, img, max_dist=max_dist_in_stroke)
+        strokes = [stroke[::subsample] for stroke in strokes]
+        strokes = [stroke for stroke in strokes if len(stroke) > min_length]
+        if len(strokes) > 0:
+            sketch.append(strokes)
 
-    strokes = [stroke[::subsample] for stroke in strokes]
-    strokes = [stroke for stroke in strokes if len(stroke) > min_length]
-
-    return strokes
+    return sketch
 
 def interpolate_stroke(stroke, spline_order, n_points):
     """
@@ -188,3 +194,6 @@ def periodize_stroke(stroke, xlim, ylim):
     periodized_stroke[:,0] = ylim[0] + (stroke[:, 0] - ylim[0]) % (ylim[1] - ylim[0])
     periodized_stroke[:,1] = xlim[0] + (stroke[:, 1] - xlim[0]) % (xlim[1] - xlim[0])
     return periodized_stroke
+
+color_list = ['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black']
+

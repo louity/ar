@@ -10,27 +10,9 @@ from sketch_rnn import Model
 from sketch_rnn import DataLoader
 from sketchrnn.visutils import make_image
 from sketchrnn.batchutils import make_image_point
-'''
-PROBLEM NOW: which is the z latent we are to use? A random one also?
-'''
+
 
 use_cuda = torch.cuda.is_available()
-
-if __name__ == '__main__':
-    parser_draw = argparse.ArgumentParser(description='Drawing arguments')
-    parser_draw.add_argument('--model',
-                             default='broccoli_car_cat_20000.pth',
-                             help='the ending of model path in draw_models')
-    parser_draw.add_argument('--sigma',
-                             default=1,
-                             type=float,
-                             help='variance when generating a point')
-    parser_draw.add_argument('--nbr_point_next',
-                             default=30,
-                             type=int,
-                             help='nbr of point continuing the draw')
-    parser_draw.add_argument('--plot', action='store_true', help='plot result')
-    args_draw = parser_draw.parse_args()
 
 
 def make_seq(seq_x, seq_y, seq_z):
@@ -144,100 +126,15 @@ def adjust_img(array_offsets):
 
 
 
-def generate_example_sketch():
-    """create a half-circle."""
-    painting = 0
-    nbr_point_circle = 30
-    angle = np.linspace(0, np.pi, nbr_point_circle)
-    x = np.cos(angle)
-    y = np.sin(angle)
-    # x[1:] = x[1:] - x[:-1]
-    # y[1:] = y[1:] - y[:-1]
-    painting = np.zeros((nbr_point_circle, 3))
-    painting[:, 0] = x
-    painting[:, 1] = y
-    return(painting)
+def generate_example_sketch(n_points=30):
+    """Generates sketch with one half-circle stroke."""
+    angle = np.linspace(0, np.pi, n_points)
+    half_circle_stroke = np.zeros((n_points, 2))
+    half_circle_stroke[:, 0] = np.cos(angle)
+    half_circle_stroke[:, 1] = np.sin(angle)
 
-# if __name__ == '__main__':
-    # # non dx,dy,dz
-    # paint_circle = create_example_painting()
-    # paint_circle[10, 2] = 1
-    # paint_circle[-1, 2] = 1
-    # circle_as_stroke = from_3array_to_larray(paint_circle)
-    # paint_circle_bis = from_larray_to_3array(circle_as_stroke)
-    # import pdb; pdb.set_trace()
-
-
-def tina_et_charly(model_name,
-             use_cuda,
-             nbr_point_next,
-             painting_completing,
-             painting_conditioning,
-             sig=0.1):
-    # transform seq of stroke into (nbr,3)
-    import pdb;pdb.set_trace()
-    painting_completing = from_larray_to_3array(painting_completing)
-    painting_conditioning = from_larray_to_3array(painting_conditioning)
-
-    # load hp
-    hp_path = 'draw_models/hp_folder/' + model_name[:-4] + '.pickle'
-    with open(hp_path, 'rb') as handle:
-        hp = pickle.load(handle)
-    hp.use_cuda = use_cuda
-
-    # load model
-    model = Model(hyper_parameters=hp, parametrization='point')
-    encoder_name = 'draw_models/encoder_' + model_name
-    decoder_name = 'draw_models/decoder_' + model_name
-    model.load(encoder_name, decoder_name)
-
-    # It is in format (x,y,p) put it into that (dx,dy,p) format
-    datum = painting_completing
-    # offset the coordinate
-    datum[1:, 0:2] = datum[1:, 0:2] - datum[:-1, 0:2]
-    # compute the std of initial image
-    mean_ini, std_ini = compute_variance(datum)
-    # normalize the painting to complete
-    datum = scale_stroke(datum, std_ini)
-    # format from (dx,dy,p) to the 5
-    img_to_complete = make_image_point(datum)
-
-    # determining the image that will condition the latent vector z.
-        # format (x,y,p) to (dx,dy,p)
-    img_full = painting_conditioning
-    img_full[1:, 0:2] = img_full[1:, 0:2] - img_full[:-1, 0:2]
-    mean_full, std_full = compute_variance(img_full)
-    img_full = scale_stroke(img_full, std_full)
-    img_full = make_image_point(img_full)
-
-    # complete
-    img_tail = model.finish_drawing_point(img_to_complete,
-                                          use_cuda,
-                                          nbr_point_next=nbr_point_next,
-                                          img_full=img_full,
-                                          sigma=sig)
-
-    # process the tail so that it has the same variance as the images
-    # it tries to complete.
-    mean_tail, std_tail = compute_variance(img_tail)
-    img_tail = scale_stroke(img_tail, std_tail)
-    img_total = np.concatenate((datum, img_tail), 0)
-
-    # plot the image..
-    (img_coo, img_offset) = make_seq(img_total[:, 0],
-                                     img_total[:, 1],
-                                     img_total[:, 2])
-    (img_tail_coo, img_tail_offset) = make_seq(img_tail[:, 0],
-                                               img_tail[:, 1],
-                                               img_tail[:, 2])
-
-    make_image(img_coo, 1, dest_folder=None, name='_output_', plot=True)#plot=args_draw.plot)
-    make_image(img_tail_coo, 2, dest_folder=None, name='_output_', plot=True)
-
-    # Transform (nbr,3) to list of array (nbr,2)
-    # TODO: verifier la question de l'origine
-    img_completed = from_3array_to_larray(img_tail_coo)
-    return img_completed
+    sketch = [half_circle_stroke]
+    return sketch
 
 
 def complete_sketch(hp_filepath, encoder_checkpoint, decoder_checkpoint,
@@ -341,24 +238,30 @@ def complete_sketch(hp_filepath, encoder_checkpoint, decoder_checkpoint,
 
     # set the end of the stroke
     img_coo[-1, 2] = 1
+    img_tail_coo[-1, 2] = 1
 
     if set_first_point_to_zero:
-        # add the first point
         img_coo += painting_completing_first_point
+        img_tail_coo += painting_completing_first_point
 
-    stroke_list = from_3array_to_larray(img_coo)
-    return stroke_list
+    new_strokes = from_3array_to_larray(img_coo)
+    return new_strokes
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Drawing arguments')
+    parser.add_argument('--hp_filepath', default='draw_models/hp_folder/broccoli_car_cat_20000.pickle')
+    parser.add_argument('--encoder_checkpoint', default='draw_models/encoder_broccoli_car_cat_20000.pth')
+    parser.add_argument('--decoder_checkpoint', default='draw_models/decoder_broccoli_car_cat_20000.pth')
+    parser.add_argument('--sigma', default=1, type=float, help='variance of the gaussian')
+    parser.add_argument('--nbr_point_next', default=30, type=int, help='nbr of point continuing the draw')
+    parser.add_argument('--plot', action='store_true', help='plot result')
+    parser.add_argument('--no_cuda', action='store_true', help='disable cuda')
+
+    args = parser.parse_args()
+
     circle_sketch = generate_example_sketch()
-    circle_sketch[10, 2] = 0
-    circle_sketch[-1, 2] = 1
-    paint = from_3array_to_larray(circle_sketch)
+    use_cuda = torch.cuda.is_available() and not args.no_cuda
 
-    hp_filepath = 'draw_models/hp_folder/broccoli_car_cat_20000.pickle'
-    encoder_checkpoint = 'draw_models/encoder_broccoli_car_cat_20000.pth'
-    decoder_checkpoint = 'draw_models/decoder_broccoli_car_cat_20000.pth'
-
-    img_completed = complete_sketch(hp_filepath, encoder_checkpoint, decoder_checkpoint, use_cuda,
-                      args_draw.nbr_point_next, paint, paint,
-                      args_draw.sigma, plot=True, seed=0)
+    img_completed = complete_sketch(args.hp_filepath, args.encoder_checkpoint, args.decoder_checkpoint, use_cuda,
+                      args.nbr_point_next, circle_sketch, circle_sketch,
+                      args.sigma, plot=args.plot, seed=0)
