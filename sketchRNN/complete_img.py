@@ -143,132 +143,9 @@ def adjust_img(array_offsets):
         return(img_full)
 
 
-def complete(model_name,
-             use_cuda,
-             nbr_point_next,
-             painting_completing=None,
-             painting_conditioning=None,
-             idx=None,
-             sig=0.1):
-    '''
-    Methods:
-    --------
-    painting_completing/conditioning are images in format (nbr, 3) (x, y, p)
-    and we want to complete them. Beware there are others format. (dx, dy, p) where
-    (dx, dy) is the offset with respect to the previous point. An another one
-    of size (nbr, 5), the one used by the neural net.
 
-    Inputs:
-    -------
-        - model_name : a string of the type 'broccoli_car_cat_20000.pth'.
-        use_cuda : Boolean.
-        - idx : integer representing the index of an image to the dataset
-    associated with model_name.
-        - painting_completing: should be a parametred version ready for the neural network. It
-    should be of the same format as 'datum'. Hence a numpy array of dimension
-    (nbr_points, 3) and each line being (x,y,p) where (x,y) represents
-    the coordinate (TODO: with respect to what???) and p\in{0,1} saying weither
-    or not the point are linked.
-        - painting_conditioning: comes in the same format. The goal is to provide
-    a latent vector z.
-        - sig : the variance of the latent normal vector z if not using the
-    latent vector of a global image. (Although we may want to have the latent
-    vector of a given area..)
-
-    Outputs:
-    --------
-    '''
-    if painting_completing is None and idx is None:
-        raise ValueError('there should at least one of the two that is\
-                         None.')
-    # load hp
-    hp_path = 'draw_models/hp_folder/' + args_draw.model[:-4] + '.pickle'
-    with open(hp_path, 'rb') as handle:
-        hp = pickle.load(handle)
-    hp.use_cuda = use_cuda
-
-    # load model
-    model = Model(hyper_parameters=hp, parametrization='point')
-    encoder_name = 'draw_models/encoder_' + args_draw.model
-    decoder_name = 'draw_models/decoder_' + args_draw.model
-    model.load(encoder_name, decoder_name)
-
-    # prepare img to complete and image that condition
-    if idx is not None:
-        # Then completing an image of the dataset
-        regular = '[_][0-9]+'
-        name_mid = re.split(regular, args_draw.model[:-4])
-        name_mid = name_mid[0]
-        path_data = 'data/' + name_mid + '.npz'
-        try:
-            dataloader = DataLoader(path_data, hp)
-        except:
-            # TODO: find which is the error to except
-            print('the path to dataset is not working')
-        idx = np.random.randint(1, 30)
-        datum = dataloader.data[idx]
-        (nbr_points_datum, _) = datum.shape
-        # TODO: make 0.6 as a parameter...
-        datum = datum[:int(nbr_points_datum*0.6)]
-        # TODO: remember what make_image_point is doing
-        img_full = make_image_point(datum)
-        img_to_complete = make_image_point(datum)  # img is in the parametrized format
-    else:
-        # completing our own image
-        # It is in format (x,y,p) put it into that (dx,dy,p) format
-        datum = painting_completing
-        # offset the coordinate
-        datum[1:, 0:2] = datum[1:, 0:2] - datum[:-1, 0:2]
-        # compute the std of initial image
-        mean_ini, std_ini = compute_variance(datum)
-        # normalize the painting to complete
-        datum = scale_stroke(datum, std_ini)
-        # format from (dx,dy,p) to the 5
-        img_to_complete = make_image_point(datum)
-
-        # determining the image that will condition the latent vector z.
-        if painting_conditioning is not None:
-            # format (x,y,p) to (dx,dy,p)
-            img_full = painting_conditioning
-            img_full[1:, 0:2] = img_full[1:, 0:2] - img_full[:-1, 0:2]
-            mean_full, std_full = compute_variance(img_full)
-            img_full = scale_stroke(img_full, std_full)
-            img_full = make_image_point(img_full)
-        else:
-            img_full = None
-
-    # complete the stuff : img_tail is in format (dx, dy, p)
-    # max_length_mean = 
-    img_tail = model.finish_drawing_point(img_to_complete,
-                                          use_cuda,
-                                          nbr_point_next=nbr_point_next,
-                                          img_full=img_full,
-                                          sigma=sig)
-    # process the tail so that it has the same variance as the images
-    # it tries to complete.
-    mean_tail, std_tail = compute_variance(img_tail)
-    # print(mean_tail, std_tail)
-
-    img_tail = scale_stroke(img_tail, std_tail)
-
-    # TODO: check that the concatenation is ok
-    img_total = np.concatenate((datum, img_tail), 0)
-
-    # plot the image..
-    (img_coo, img_offset) = make_seq(img_total[:, 0],
-                                     img_total[:, 1],
-                                     img_total[:, 2])
-    (img_tail_coo, img_tail_offset) = make_seq(img_tail[:, 0],
-                                               img_tail[:, 1],
-                                               img_tail[:, 2])
-
-    make_image(img_coo, 1, dest_folder=None, name='_output_', plot=True)#plot=args_draw.plot)
-    make_image(img_tail_coo, 2, dest_folder=None, name='_output_', plot=True)
-    # TODO: return a list of array...
-
-
-def create_example_painting():
-    # create a half-circle
+def generate_example_sketch():
+    """create a half-circle."""
     painting = 0
     nbr_point_circle = 30
     angle = np.linspace(0, np.pi, nbr_point_circle)
@@ -363,12 +240,37 @@ def tina_et_charly(model_name,
     return img_completed
 
 
-def tina_et_charly_2(hp_filepath, encoder_ckpt, decoder_ckpt,
-                      use_cuda, nbr_point_next, painting_completing,
-                      painting_conditioning, sig=0.1, plot=False,
-                      set_first_point_to_zero=False, rescale_tail=True):
+def complete_sketch(hp_filepath, encoder_checkpoint, decoder_checkpoint,
+                    use_cuda, nbr_point_next, painting_completing,
+                    painting_conditioning, sigma=0.1, plot=False,
+                    set_first_point_to_zero=False, rescale_tail=True, seed=None):
+    """Complete existing sketch using pretrained sketchRNN.
 
-    # transform seq of stroke into (nbr,3)
+    Parameters
+        hp_filepath: string
+
+        encoder_checkpoint: string
+
+        decoder_checkpoint: string
+
+        use_cuda: boolean
+
+        nbr_point_next: int
+
+        painting_completing:
+
+        painting_conditioning:
+
+        sigma: float
+
+    Returns
+
+    """
+
+    if seed is not None:
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+
     painting_completing = from_larray_to_3array(painting_completing)
     painting_conditioning = from_larray_to_3array(painting_conditioning)
 
@@ -379,26 +281,20 @@ def tina_et_charly_2(hp_filepath, encoder_ckpt, decoder_ckpt,
         painting_completing -= painting_completing_first_point
         painting_conditioning -= painting_conditioning_first_point
 
-    # load hp
-    # hp_path = 'draw_models/hp_folder/' + model_name[:-4] + '.pickle'
     with open(hp_filepath, 'rb') as handle:
         hp = pickle.load(handle)
     hp.use_cuda = use_cuda
 
     # load model
     model = Model(hyper_parameters=hp, parametrization='point')
-    # encoder_name = 'draw_models/encoder_' + model_name
-    # decoder_name = 'draw_models/decoder_' + model_name
-    model.load(encoder_ckpt, decoder_ckpt)
+    model.load(encoder_checkpoint, decoder_checkpoint)
 
-    # It is in format (x,y,p) put it into that (dx,dy,p) format
+    # from format (x, y, p) to (dx, dy, p)
     datum = painting_completing
-    # offset the coordinate
-
     datum[1:, 0:2] = datum[1:, 0:2] - datum[:-1, 0:2]
-    # compute the std of initial image
+
+    # normalize
     mean_ini, std_ini = compute_variance(datum)
-    # normalize the painting to complete
     datum_scaled = scale_stroke(datum, std_ini)
     # format from (dx,dy,p) to the 5
     img_to_complete = make_image_point(datum_scaled)
@@ -416,7 +312,7 @@ def tina_et_charly_2(hp_filepath, encoder_ckpt, decoder_ckpt,
                                           use_cuda,
                                           nbr_point_next=nbr_point_next,
                                           img_full=img_full,
-                                          sigma=sig)
+                                          sigma=sigma)
 
     # process the tail so that it has the same variance as the images
     # it tries to complete.
@@ -450,31 +346,19 @@ def tina_et_charly_2(hp_filepath, encoder_ckpt, decoder_ckpt,
         # add the first point
         img_coo += painting_completing_first_point
 
-    return from_3array_to_larray(img_coo)
+    stroke_list = from_3array_to_larray(img_coo)
+    return stroke_list
 
 if __name__ == '__main__':
-    paint_circle = create_example_painting()
-    paint_circle[10, 2] = 0
-    paint_circle[-1, 2] = 1
-    paint = from_3array_to_larray(paint_circle)
-
-    # tina_et_charly(args_draw.model,
-    #                 use_cuda,
-    #                 args_draw.nbr_point_next,
-    #                 paint,
-    #                 paint,
-    #                 args_draw.sigma)
+    circle_sketch = generate_example_sketch()
+    circle_sketch[10, 2] = 0
+    circle_sketch[-1, 2] = 1
+    paint = from_3array_to_larray(circle_sketch)
 
     hp_filepath = 'draw_models/hp_folder/broccoli_car_cat_20000.pickle'
-    encoder_ckpt = 'draw_models/encoder_broccoli_car_cat_20000.pth'
-    decoder_ckpt = 'draw_models/decoder_broccoli_car_cat_20000.pth'
-    img_completed = tina_et_charly_2(hp_filepath, encoder_ckpt, decoder_ckpt, use_cuda,
-                      args_draw.nbr_point_next, paint, paint,
-                      args_draw.sigma)
+    encoder_checkpoint = 'draw_models/encoder_broccoli_car_cat_20000.pth'
+    decoder_checkpoint = 'draw_models/decoder_broccoli_car_cat_20000.pth'
 
-    # complete(args_draw.model,
-             # use_cuda,
-             # int(args_draw.nbr_point_next),
-             # painting_completing=create_example_painting(),
-             # #painting_conditioning=create_example_painting(),
-             # idx=None)
+    img_completed = complete_sketch(hp_filepath, encoder_checkpoint, decoder_checkpoint, use_cuda,
+                      args_draw.nbr_point_next, paint, paint,
+                      args_draw.sigma, plot=True, seed=0)

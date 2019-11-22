@@ -126,31 +126,6 @@ class DataLoader():
                                 use_cuda))
 
 
-#def max_size(data):
-#    """larger sequence length in the data set"""
-#    sizes = [len(seq) for seq in data]
-#    return max(sizes)
-
-#dataset = np.load(args.train_data, encoding='latin1')
-#data = dataset['train']
-#if args.plot_random_train_data:
-#    plot_sketch(data[np.random.randint(len(data))], parametrization)
-#data = purify(data, hp)
-#data = normalize_strokes(data)
-#max_len_out = max_size(data)
-
-
-# TODO: use it for purposes
-# valid_set = dataset['valid']
-# TODO: split the valid set in batch to have an easier evaluation..;
-# valid_set = valid_set[0:500]
-# valid_set = purify(valid_set, hp)
-# valid_set = normalize_strokes(valid_set)
-# max_len_out_val = max_size(valid_set)
-
-# test_set = dataset['test']
-
-
 def lr_decay(optimizer):
     """Decay learning rate by a factor of lr_decay"""
     for param_group in optimizer.param_groups:
@@ -169,7 +144,6 @@ class Model():
             self.decoder = DecoderRNN(self.hyper_params,
                                       max_len_out=self.hyper_params.max_len_out)
         elif self.parametrization == 'line':
-            # import pdb; pdb.set_trace()
             self.encoder = EncoderRNN_line(self.hyper_params)
             self.decoder = DecoderRNN_line(self.hyper_params, max_len_out=self.hyper_params.max_len_out)
 
